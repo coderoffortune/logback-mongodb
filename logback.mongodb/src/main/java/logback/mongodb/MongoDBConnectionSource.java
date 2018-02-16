@@ -1,18 +1,15 @@
 package logback.mongodb;
 
-import java.net.UnknownHostException;
-
-import com.mongodb.DBCollection;
-import com.mongodb.Mongo;
-import com.mongodb.MongoException;
-import com.mongodb.MongoURI;
+import com.mongodb.*;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
 
 /**
  * @author Christian Trutz
  */
 public class MongoDBConnectionSource {
 
-	private volatile DBCollection dbCollection = null;
+	private volatile MongoCollection<Document> dbCollection = null;
 
 	private String uri = null;
 
@@ -20,16 +17,20 @@ public class MongoDBConnectionSource {
 
 	private String collection = null;
 
-	protected DBCollection getDBCollection() {
-		DBCollection dbCollectionHelper = dbCollection;
+	protected MongoCollection<Document> getDBCollection() {
+    MongoCollection<Document> dbCollectionHelper = dbCollection;
+
 		if (dbCollectionHelper == null) {
 			synchronized (this) {
-				dbCollectionHelper = dbCollection;
+
+			  dbCollectionHelper = dbCollection;
+
 				if (dbCollectionHelper == null) {
 					try {
-						final Mongo mongo = new Mongo(new MongoURI(uri));
-						dbCollection = mongo.getDB(db)
-								.getCollection(collection);
+						final MongoClient mongo = new MongoClient(new MongoClientURI(uri));
+
+						dbCollection = mongo.getDatabase(db).getCollection(collection);
+
 						Runtime.getRuntime().addShutdownHook(
 								new Thread(new Runnable() {
 
@@ -37,15 +38,17 @@ public class MongoDBConnectionSource {
 									public void run() {
 										mongo.close();
 									}
-								}, "mongo shutdown"));
+
+								},
+                "mongo shutdown"));
 					} catch (MongoException mongoException) {
 						mongoException.printStackTrace();
-					} catch (UnknownHostException unknownHostException) {
-						unknownHostException.printStackTrace();
 					}
 				}
+
 			}
 		}
+
 		return dbCollection;
 	}
 
